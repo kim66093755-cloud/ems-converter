@@ -48,7 +48,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   --ok:#5FD39A; --ok-soft:#13311F; --warn:#F2BE5C; --warn-soft:#352812; --bad:#FF8A7E; --bad-soft:#3A1715; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none}
+.drop,.pick{position:relative;overflow:hidden}
+.cover{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:200px}
+.native{display:block;width:100%;margin-top:8px;font-size:13px;color:var(--muted)}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
 .wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 120px}
 header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:2px solid var(--blue);margin-bottom:20px}
@@ -157,19 +159,19 @@ table.items input{padding:5px 6px}
     <aside class="side">
       <div class="box">
         <h2>사진 올리기</h2>
-        <div class="drop" id="drop" role="button" tabindex="0" aria-label="기표지 사진 선택">
+        <div class="drop" id="drop">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
           <strong>기표지 촬영 또는 사진 선택</strong>
           <span>여러 장 한꺼번에 가능 · 한 장 = 한 건<br>가로로 찍혀도 됩니다</span>
+          <input id="file" class="cover" type="file" accept="image/*" multiple aria-label="기표지 사진 선택">
         </div>
-        <input id="file" class="vh" type="file" accept="image/*" multiple>
-        <input id="cam" class="vh" type="file" accept="image/*" capture="environment">
         <div id="sampleWarn" class="unavail" hidden style="margin-top:10px"></div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn sm" id="pickBtn" type="button">사진 선택</button>
-          <button class="btn sm" id="camBtn" type="button">카메라로 찍기</button>
+          <span class="btn sm pick">카메라로 찍기<input id="cam" class="cover" type="file" accept="image/*" capture="environment" aria-label="카메라로 찍기"></span>
           <button class="btn sm" id="addBlank" type="button">＋ 빈 건 직접 입력</button>
         </div>
+        <label class="notice" for="native" style="display:block;margin-top:10px">위 버튼이 안 열리면 아래 기본 선택 칸을 눌러 보세요</label>
+        <input id="native" class="native" type="file" accept="image/*" multiple>
       </div>
 
       <div class="box">
@@ -503,11 +505,7 @@ SET_IDS.forEach(id=>$("#"+id).addEventListener("change",saveSettings));
 $("#addBlank").addEventListener("click",()=>{dropExample();rows.push(blankRow());render()});
 
 const drop=$("#drop");
-const openPicker=()=>$("#file").click();
-drop.addEventListener("click",openPicker);
-drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openPicker()}});
-$("#pickBtn").addEventListener("click",openPicker);
-$("#camBtn").addEventListener("click",()=>$("#cam").click());
+$("#native").addEventListener("change",e=>{addFiles(e.target.files);e.target.value=""});
 $("#cam").addEventListener("change",e=>{addFiles(e.target.files);e.target.value=""});
 ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
@@ -519,7 +517,8 @@ function dropExample(){for(let i=rows.length-1;i>=0;i--)if(rows[i].example)rows.
 
 function addFiles(files){
   const fs=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name||""));
-  if(!fs.length){toast("사진 파일만 올릴 수 있습니다");return}
+  if(!fs.length){toast(files&&files.length?"사진 파일만 올릴 수 있습니다":"선택된 사진이 없습니다");return}
+  toast(`사진 ${fs.length}장을 받았습니다`);
   dropExample();
   const added=fs.map(file=>{const r=blankRow();r.blob=file;r.photo=URL.createObjectURL(file);rows.push(r);return r});
   render();
